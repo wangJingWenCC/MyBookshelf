@@ -56,6 +56,7 @@ import com.kunfei.bookshelf.utils.theme.NavigationViewUtil;
 import com.kunfei.bookshelf.utils.theme.ThemeStore;
 import com.kunfei.bookshelf.view.fragment.BookListFragment;
 import com.kunfei.bookshelf.view.fragment.FindBookFragment;
+import com.kunfei.bookshelf.view.fragment.LocalBookListFragment;
 import com.kunfei.bookshelf.widget.modialog.InputDialog;
 import com.kunfei.bookshelf.widget.modialog.MoDialogHUD;
 
@@ -69,7 +70,7 @@ import kotlin.Unit;
 
 import static com.kunfei.bookshelf.utils.NetworkUtils.isNetWorkAvailable;
 
-public class MainActivity extends BaseTabActivity<MainContract.Presenter> implements MainContract.View, BookListFragment.CallbackValue {
+public class MainActivity extends BaseTabActivity<MainContract.Presenter> implements MainContract.View, BookListFragment.CallbackValue, LocalBookListFragment.LocalCallbackValue {
     private final int requestSource = 14;
     private String[] mTitles;
 
@@ -160,7 +161,7 @@ public class MainActivity extends BaseTabActivity<MainContract.Presenter> implem
     @Override
     protected void initData() {
         viewIsList = preferences.getBoolean("bookshelfIsList", true);
-        mTitles = new String[]{getString(R.string.bookshelf), getString(R.string.find)};
+        mTitles = new String[]{getString(R.string.bookshelf), getString(R.string.find), "本地书架"};
     }
 
     @Override
@@ -182,18 +183,22 @@ public class MainActivity extends BaseTabActivity<MainContract.Presenter> implem
     protected List<Fragment> createTabFragments() {
         BookListFragment bookListFragment = null;
         FindBookFragment findBookFragment = null;
+        LocalBookListFragment localBookListFragment = null;
         for (Fragment fragment : getSupportFragmentManager().getFragments()) {
             if (fragment instanceof BookListFragment) {
                 bookListFragment = (BookListFragment) fragment;
             } else if (fragment instanceof FindBookFragment) {
                 findBookFragment = (FindBookFragment) fragment;
+            } else if (fragment instanceof LocalBookListFragment) {
+                localBookListFragment = (LocalBookListFragment) fragment;
             }
         }
         if (bookListFragment == null)
             bookListFragment = new BookListFragment();
         if (findBookFragment == null)
             findBookFragment = new FindBookFragment();
-        return Arrays.asList(bookListFragment, findBookFragment);
+        if (localBookListFragment == null) localBookListFragment = new LocalBookListFragment();
+        return Arrays.asList(bookListFragment, findBookFragment, localBookListFragment);
     }
 
     @Override
@@ -260,10 +265,19 @@ public class MainActivity extends BaseTabActivity<MainContract.Presenter> implem
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
                 View tabView = (View) Objects.requireNonNull(tab.getCustomView()).getParent();
-                if (tab.getPosition() == 0) {
-                    showBookGroupMenu(tabView);
-                } else {
-                    showFindMenu(tabView);
+                switch (tab.getPosition()) {
+                    case 0:
+                        showBookGroupMenu(tabView);
+                        break;
+                    case 1:
+                        showFindMenu(tabView);
+                        break;
+                    case 2:
+                        showLocalBookGroupMenu(tabView);
+                        break;
+                    default:
+                        showFindMenu(tabView);
+                        break;
                 }
             }
         });
@@ -273,6 +287,23 @@ public class MainActivity extends BaseTabActivity<MainContract.Presenter> implem
      * 显示分组菜单
      */
     private void showBookGroupMenu(View view) {
+        PopupMenu popupMenu = new PopupMenu(this, view);
+        for (int j = 0; j < getResources().getStringArray(R.array.book_group_array).length; j++) {
+            popupMenu.getMenu().add(0, 0, j, getResources().getStringArray(R.array.book_group_array)[j]);
+        }
+        popupMenu.setOnMenuItemClickListener(menuItem -> {
+            upGroup(menuItem.getOrder());
+            return true;
+        });
+        popupMenu.setOnDismissListener(popupMenu1 -> updateTabItemIcon(0, false));
+        popupMenu.show();
+        updateTabItemIcon(0, true);
+    }
+
+    /**
+     * 显示本地分组菜单
+     */
+    private void showLocalBookGroupMenu(View view) {
         PopupMenu popupMenu = new PopupMenu(this, view);
         for (int j = 0; j < getResources().getStringArray(R.array.book_group_array).length; j++) {
             popupMenu.getMenu().add(0, 0, j, getResources().getStringArray(R.array.book_group_array)[j]);
@@ -724,4 +755,18 @@ public class MainActivity extends BaseTabActivity<MainContract.Presenter> implem
         }
     }
 
+    @Override
+    public boolean isLocalRecreate() {
+        return isRecreate;
+    }
+
+    @Override
+    public int getLocalGroup() {
+        return group;
+    }
+
+    @Override
+    public ViewPager getLocalViewPager() {
+        return mVp;
+    }
 }

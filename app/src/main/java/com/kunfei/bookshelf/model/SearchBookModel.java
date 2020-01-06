@@ -158,10 +158,12 @@ public class SearchBookModel {
                             public void onNext(List<SearchBookBean> searchBookBeans) {
                                 if (searchTime == startThisSearchTime) {
                                     searchSuccessNum++;
+                                    List<SearchBookBean> bookBeans = new ArrayList<>();
                                     if (searchBookBeans.size() > 0) {
                                         for (SearchBookBean temp : searchBookBeans) {
                                             int searchTime = (int) (System.currentTimeMillis() - startTime) / 1000;
                                             temp.setSearchTime(searchTime);
+                                            if (temp.getName().replaceAll("\\(.*\\)","").contains(content)) bookBeans.add(temp);
                                             for (BookShelfBean bookShelfBean : bookShelfS) {
                                                 if (Objects.equals(bookShelfBean.getNoteUrl(), temp.getNoteUrl())) {
                                                     temp.setIsCurrentSource(true);
@@ -169,7 +171,8 @@ public class SearchBookModel {
                                                 }
                                             }
                                         }
-                                        searchListener.loadMoreSearchBook(searchBookBeans);
+
+                                        searchListener.loadMoreSearchBook(bookBeans);
                                     } else {
                                         searchEngine.setHasMore(false);
                                     }
